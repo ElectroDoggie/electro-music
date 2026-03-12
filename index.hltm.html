@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Music Ultimate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+    <style>
+        :root {
+            --bg-main: #030303; --bg-elevated: #212121; --bg-hover: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff; --text-sec: #aaaaaa;
+            --brand-color: #ffffff;
+            --player-height: 80px; --nav-width: 240px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); overflow-x: hidden; user-select: none; }
+        button { cursor: pointer; border: none; background: transparent; color: inherit; transition: 0.2s; outline: none; }
+        input, select { background: transparent; border: 1px solid #444; color: white; padding: 12px; border-radius: 4px; outline: none; width: 100%; font-size: 14px; }
+        input:focus, select:focus { border-color: var(--text-main); }
+        select option { background: #212121; color: white; }
+        
+        /* HEADER */
+        header { position: fixed; top: 0; left: 0; width: 100%; height: 64px; background: rgba(3,3,3,0.95); backdrop-filter: blur(10px); display: flex; justify-content: space-between; align-items: center; padding: 0 24px; z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .h-left { display: flex; align-items: center; gap: 24px; }
+        .logo { display: flex; align-items: center; gap: 4px; font-size: 24px; font-weight: 700; letter-spacing: -1px; cursor: pointer; }
+        .logo span.icon { font-size: 32px; color: var(--brand-color); }
+        .search-box { display: flex; align-items: center; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; height: 40px; width: 400px; padding: 0 16px; gap: 8px; transition: 0.2s; }
+        .search-box:focus-within { border-color: var(--text-main); }
+        .search-box input { border: none; padding: 0; font-size: 15px; }
+        .profile-btn { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; cursor: pointer; }
+
+        /* SIDEBAR */
+        aside { position: fixed; top: 64px; left: 0; width: var(--nav-width); height: calc(100vh - 64px - var(--player-height)); padding: 24px 12px; }
+        .nav-link { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; color: var(--text-sec); }
+        .nav-link:hover, .nav-link.active { background: var(--bg-hover); color: var(--text-main); }
+        .nav-sep { height: 1px; background: #333; margin: 16px 0; }
+        
+        /* MAIN */
+        main { margin-top: 64px; margin-left: var(--nav-width); padding: 32px 48px; height: calc(100vh - 64px - var(--player-height)); overflow-y: auto; padding-bottom: 100px; }
+        .view { display: none; } .view.active { display: block; }
+        .section-title { font-size: 32px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        
+        /* TRACK GRID */
+        .track-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; }
+        .track-card { cursor: pointer; display: flex; flex-direction: column; gap: 12px; position: relative; border-radius: 8px; padding: 8px; transition: 0.3s; }
+        .track-card:hover { background: var(--bg-hover); }
+        .cover-wrapper { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 4px; overflow: hidden; background: #222; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .cover-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.2s; }
+        .play-overlay span { font-size: 48px; }
+        .track-card:hover .play-overlay { opacity: 1; }
+        
+        .track-info h3 { font-size: 15px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .track-info p { font-size: 14px; color: var(--text-sec); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+        
+        /* ИКОНКИ НА ТРЕКЕ */
+        .more-btn { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.7); border-radius: 50%; width: 32px; height: 32px; display: none; align-items: center; justify-content: center; z-index: 10; color: white; border: 1px solid transparent; }
+        .track-card:hover .more-btn { display: flex; }
+        .more-btn:hover { background: rgba(255,255,255,0.2); border-color: white; }
+        
+        /* Кнопка удаления для админа на главной */
+        .admin-del-btn { position: absolute; top: 12px; left: 12px; background: rgba(255,0,0,0.8); width: 32px; height: 32px; border-radius: 50%; display: none; align-items: center; justify-content: center; z-index: 10; color: white; border: 1px solid #ff4d4d; }
+        .track-card:hover .admin-del-btn { display: flex; }
+        .admin-del-btn:hover { background: #ff0000; transform: scale(1.1); }
+
+        /* НОВОЕ: Кнопка удаления из плейлиста */
+        .pl-remove-btn { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.8); width: 32px; height: 32px; border-radius: 50%; display: none; align-items: center; justify-content: center; z-index: 10; color: white; border: 1px solid #555; }
+        .track-card:hover .pl-remove-btn { display: flex; }
+        .pl-remove-btn:hover { background: #ff4d4d; border-color: #ff4d4d; }
+
+        /* ВЕРИФИКАЦИЯ */
+        .badge-blue { color: #3ea6ff; font-size: 16px; }
+        .badge-gold { color: #ffd700; font-size: 16px; }
+
+        /* PLAYLIST CARDS */
+        .pl-card { background: #1a1a1a; padding: 16px; border-radius: 8px; cursor: pointer; text-align: center; border: 1px solid #333; transition: 0.2s; position: relative; }
+        .pl-card:hover { background: #2a2a2a; border-color: #555; }
+        .pl-card span.icon { font-size: 48px; color: var(--text-sec); margin-bottom: 12px; }
+        .pl-card:hover .more-btn { display: flex; }
+
+        /* PLAYER */
+        .player-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: var(--player-height); background: #212121; border-top: 1px solid #333; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; z-index: 2000; }
+        .p-info { display: flex; align-items: center; gap: 16px; width: 30%; min-width: 250px; }
+        .p-cover { width: 48px; height: 48px; border-radius: 4px; object-fit: cover; background: #111; }
+        .p-text h4 { font-size: 15px; font-weight: 500; }
+        .p-text p { font-size: 13px; color: var(--text-sec); display: flex; align-items: center; gap: 4px; }
+        .p-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40%; gap: 8px; }
+        .p-buttons { display: flex; align-items: center; gap: 24px; }
+        .p-buttons span { font-size: 32px; cursor: pointer; color: var(--text-main); transition: 0.2s; }
+        .p-buttons span:hover { transform: scale(1.1); }
+        .p-play { font-size: 44px !important; }
+        .p-timeline { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 500px; font-size: 12px; color: var(--text-sec); }
+        .progress-bar { flex: 1; height: 4px; background: #444; border-radius: 2px; cursor: pointer; position: relative; }
+        .progress-fill { position: absolute; left: 0; top: 0; height: 100%; background: #fff; border-radius: 2px; width: 0%; pointer-events: none; }
+        .p-volume { width: 30%; display: flex; justify-content: flex-end; align-items: center; gap: 12px; color: var(--text-sec); }
+        .vol-slider { width: 100px; height: 4px; background: #444; border-radius: 2px; cursor: pointer; position: relative; }
+        .vol-fill { position: absolute; left: 0; top: 0; height: 100%; background: #fff; border-radius: 2px; width: 100%; pointer-events: none; }
+
+        /* MODALS */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 3000; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: #212121; width: 400px; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; }
+        .m-header { padding: 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #333; }
+        .m-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        
+        .btn-primary { background: var(--text-main); color: var(--bg-main); padding: 12px; border-radius: 24px; font-weight: 500; font-size: 15px; text-align: center; cursor: pointer; }
+        .btn-primary:hover { background: #ccc; }
+        .btn-outline { border: 1px solid var(--text-main); color: var(--text-main); padding: 10px; border-radius: 24px; font-weight: 500; text-align: center; cursor: pointer; }
+        .btn-danger { background: #ff4d4d; color: white; padding: 12px; border-radius: 24px; font-weight: 500; font-size: 15px; text-align: center; cursor: pointer; border: none; }
+        .btn-danger:hover { background: #ff3333; }
+        
+        .pl-list-item { padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-radius: 8px; border: 1px solid transparent; }
+        .pl-list-item:hover { background: #333; }
+
+        .upload-box { border: 2px dashed #555; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; color: var(--text-sec); }
+        .upload-box:hover { border-color: var(--text-main); color: var(--text-main); }
+
+        #admin-fab { display: none; position: fixed; bottom: 100px; right: 32px; width: 56px; height: 56px; background: var(--text-main); color: var(--bg-main); border-radius: 50%; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1500; cursor: pointer; }
+        #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 12px 24px; border-radius: 24px; font-weight: 500; z-index: 9999; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="toast"></div>
+
+    <header>
+        <div class="h-left">
+            <div class="logo" onclick="switchView('home')">
+                <span class="material-symbols-outlined icon">play_circle</span> Music
+            </div>
+        </div>
+        <div class="search-box">
+            <span class="material-symbols-outlined" style="color:var(--text-sec)">search</span>
+            <input type="text" id="search-input" placeholder="Поиск треков и артистов..." oninput="handleSearch(this.value)">
+        </div>
+        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin2026" class="profile-btn" onclick="openProfile()">
+    </header>
+
+    <aside>
+        <div class="nav-link active" id="nav-home" onclick="switchView('home')"><span class="material-symbols-outlined">home</span> Главная</div>
+        <div class="nav-link"><span class="material-symbols-outlined">explore</span> Навигатор</div>
+        <div class="nav-sep"></div>
+        <div class="nav-link" id="nav-playlists" onclick="switchView('playlists')"><span class="material-symbols-outlined">queue_music</span> Мои плейлисты</div>
+    </aside>
+
+    <main>
+        <div id="view-home" class="view active">
+            <div class="section-title">Создано для вас</div>
+            <div class="track-grid" id="main-grid"></div>
+        </div>
+
+        <div id="view-playlists" class="view">
+            <div class="section-title">Ваши плейлисты</div>
+            <div class="track-grid" id="playlists-grid"></div>
+        </div>
+
+        <div id="view-playlist-detail" class="view">
+            <div class="section-title">
+                <span class="material-symbols-outlined" style="cursor:pointer;" onclick="switchView('playlists')">arrow_back</span>
+                <span id="detail-pl-name">Название</span>
+            </div>
+            <div class="track-grid" id="pl-detail-grid"></div>
+        </div>
+    </main>
+
+    <div class="player-bar">
+        <div class="p-info">
+            <img id="pl-cover" src="https://via.placeholder.com/48?text=YT" class="p-cover">
+            <div class="p-text">
+                <h4 id="pl-title">Не воспроизводится</h4>
+                <p id="pl-artist">Выберите трек <span id="pl-badge"></span></p>
+            </div>
+        </div>
+        <div class="p-controls">
+            <div class="p-buttons">
+                <span class="material-symbols-outlined" onclick="playPrev()">skip_previous</span>
+                <span class="material-symbols-outlined p-play" id="btn-play-pause" onclick="togglePlay()">play_circle</span>
+                <span class="material-symbols-outlined" onclick="playNext()">skip_next</span>
+            </div>
+            <div class="p-timeline">
+                <span id="pl-time">0:00</span>
+                <div class="progress-bar" id="progress-container" onclick="seekTrack(event)">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span id="pl-duration">0:00</span>
+            </div>
+        </div>
+        <div class="p-volume">
+            <span class="material-symbols-outlined">volume_up</span>
+            <div class="vol-slider" onclick="setVolume(event)">
+                <div class="vol-fill" id="vol-fill"></div>
+            </div>
+        </div>
+    </div>
+    <audio id="audio-engine"></audio>
+
+    <div class="modal" id="modal-profile" onclick="closeModals(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="m-header">
+                <div style="display:flex; gap:16px; align-items:center;">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin2026" style="width:50px;border-radius:50%;">
+                    <div><h3>Мой Аккаунт</h3></div>
+                </div>
+                <span class="material-symbols-outlined" style="cursor:pointer;" onclick="closeModals(null, true)">close</span>
+            </div>
+            <div class="m-body">
+                <div id="admin-login-box">
+                    <p style="font-size:12px; color:var(--text-sec);">Скрытый раздел</p>
+                    <input type="password" id="admin-code" placeholder="Введите админ код..." style="margin-bottom:12px;">
+                    <button class="btn-primary" onclick="checkAdmin()">Активировать права</button>
+                </div>
+                <div id="admin-active-box" style="display:none;">
+                    <p style="color:#4caf50; font-weight:bold; margin-bottom:16px;">✅ Доступ Администратора</p>
+                    <button class="btn-primary" onclick="openUploadStudio()">Загрузить новый трек</button>
+                    <button class="btn-outline" style="margin-top:12px; border-color:#555; color:#aaa;" onclick="logoutAdmin()">Выйти из админки</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-upload" onclick="closeModals(event)">
+        <div class="modal-content" style="width:500px;" onclick="event.stopPropagation()">
+            <div class="m-header">
+                <h2>Добавить трек</h2>
+                <span class="material-symbols-outlined" style="cursor:pointer;" onclick="closeModals(null, true)">close</span>
+            </div>
+            <div class="m-body">
+                <input type="text" id="up-title" placeholder="Название трека">
+                <input type="text" id="up-artist" placeholder="Имя исполнителя">
+                <select id="up-badge">
+                    <option value="none">Без верификации</option>
+                    <option value="blue">Синяя галочка (Верифицирован)</option>
+                    <option value="gold">Золотая галочка (Официальный артист)</option>
+                </select>
+                <div class="upload-box" onclick="document.getElementById('in-cover').click()">
+                    <span class="material-symbols-outlined" style="font-size:32px;">image</span>
+                    <p id="lbl-cover">Обложка (Квадрат 1х1)</p>
+                </div>
+                <input type="file" id="in-cover" accept="image/*" hidden onchange="lbl('in-cover', 'lbl-cover')">
+                <div class="upload-box" onclick="document.getElementById('in-audio').click()">
+                    <span class="material-symbols-outlined" style="font-size:32px;">audio_file</span>
+                    <p id="lbl-audio">Аудиофайл (MP3/WAV)</p>
+                </div>
+                <input type="file" id="in-audio" accept="audio/*" hidden onchange="lbl('in-audio', 'lbl-audio')">
+                <button class="btn-primary" onclick="uploadTrack()">ОПУБЛИКОВАТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-playlist" onclick="closeModals(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="m-header">
+                <h3>Добавить в плейлист</h3>
+                <span class="material-symbols-outlined" style="cursor:pointer;" onclick="closeModals(null, true)">close</span>
+            </div>
+            <div class="m-body">
+                <div id="pl-select-list" style="max-height: 200px; overflow-y: auto; display:flex; flex-direction:column; gap:8px;"></div>
+                <hr style="border:0; border-top:1px solid #333; margin: 8px 0;">
+                <p style="font-size:13px; color:var(--text-sec);">Создать новый:</p>
+                <input type="text" id="new-pl-name" maxlength="20" placeholder="Название (до 20 символов)">
+                <button class="btn-outline" onclick="createNewPlaylist()">Создать и добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-edit-playlist" onclick="closeModals(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="m-header">
+                <h3>Управление плейлистом</h3>
+                <span class="material-symbols-outlined" style="cursor:pointer;" onclick="closeModals(null, true)">close</span>
+            </div>
+            <div class="m-body">
+                <p style="font-size:13px; color:var(--text-sec);">Переименовать (до 20 символов):</p>
+                <input type="text" id="edit-pl-name" maxlength="20" placeholder="Новое название">
+                <button class="btn-primary" onclick="savePlaylistName()">Сохранить название</button>
+                <hr style="border:0; border-top:1px solid #333; margin: 8px 0;">
+                <button class="btn-danger" onclick="deletePlaylist()">Удалить плейлист</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="admin-fab" onclick="openUploadStudio()"><span class="material-symbols-outlined">add</span></div>
+
+    <script>
+        // === БАЗА И СОСТОЯНИЯ ===
+        const DB_NAME = "YTMusicDB_V2";
+        let db;
+        let tracks = [];
+        let playlists = JSON.parse(localStorage.getItem('ytm_playlists')) || [];
+        let currentTrackIndex = -1;
+        let isAdmin = localStorage.getItem('ytm_admin') === 'true';
+        let trackToAddId = null; 
+        let playlistToEditId = null;
+
+        const audio = document.getElementById('audio-engine');
+        const fillProg = document.getElementById('progress-fill');
+
+        function initDB() {
+            return new Promise((res, rej) => {
+                const req = indexedDB.open(DB_NAME, 1);
+                req.onupgradeneeded = (e) => {
+                    let database = e.target.result;
+                    if (!database.objectStoreNames.contains('tracks')) database.createObjectStore('tracks', { keyPath: 'id' });
+                };
+                req.onsuccess = (e) => { db = e.target.result; res(); };
+                req.onerror = (e) => rej(e);
+            });
+        }
+
+        // === УТИЛИТЫ ===
+        function toast(m) { const t=document.getElementById('toast'); t.innerText=m; t.style.display='block'; setTimeout(()=>t.style.display='none',3000); }
+        function lbl(inId, lbId) { const f = document.getElementById(inId).files[0]; if(f) document.getElementById(lbId).innerText = f.name; }
+        function toB64(file) { return new Promise(res => { const rd = new FileReader(); rd.onload = () => res(rd.result); rd.readAsDataURL(file); }); }
+        
+        function getBadgeHTML(badgeType) {
+            if(badgeType === 'blue') return `<span class="material-symbols-outlined badge-blue" title="Верифицирован">verified</span>`;
+            if(badgeType === 'gold') return `<span class="material-symbols-outlined badge-gold" title="Официальный артист">music_note</span>`;
+            return '';
+        }
+
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+            
+            document.querySelectorAll('aside .nav-link').forEach(l => l.classList.remove('active'));
+            if(viewId === 'home') document.getElementById('nav-home').classList.add('active');
+            if(viewId === 'playlists' || viewId === 'playlist-detail') document.getElementById('nav-playlists').classList.add('active');
+
+            if(viewId !== 'home') {
+                document.getElementById('search-input').value = ''; // Очищаем поиск если ушли с главной
+            }
+
+            if(viewId === 'home') handleSearch(document.getElementById('search-input').value);
+            if(viewId === 'playlists') renderPlaylists();
+        }
+
+        function closeModals(e, force = false) {
+            if (force || (e && e.target.classList.contains('modal'))) {
+                document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+            }
+        }
+
+        // === ПОИСК (НОВОЕ) ===
+        function handleSearch(query) {
+            query = query.toLowerCase().trim();
+            const filteredTracks = tracks.filter(t => 
+                t.title.toLowerCase().includes(query) || 
+                t.artist.toLowerCase().includes(query)
+            );
+            
+            // Если мы не на главной, перекидываем туда при начале ввода
+            if(!document.getElementById('view-home').classList.contains('active') && query.length > 0) {
+                switchView('home');
+                document.getElementById('search-input').focus();
+            }
+            
+            renderGrid(filteredTracks);
+        }
+
+        // === АДМИНКА ===
+        function openProfile() {
+            document.getElementById('modal-profile').style.display = 'flex';
+            document.getElementById('admin-login-box').style.display = isAdmin ? 'none' : 'block';
+            document.getElementById('admin-active-box').style.display = isAdmin ? 'block' : 'none';
+        }
+        function checkAdmin() {
+            if (document.getElementById('admin-code').value === '228Сигма') {
+                isAdmin = true; localStorage.setItem('ytm_admin', 'true');
+                toast('Права получены!'); document.getElementById('admin-code').value = '';
+                openProfile(); renderGrid(); document.getElementById('admin-fab').style.display = 'flex';
+            } else alert('Неверный код!');
+        }
+        function logoutAdmin() { isAdmin = false; localStorage.setItem('ytm_admin', 'false'); closeModals(null, true); renderGrid(); document.getElementById('admin-fab').style.display = 'none'; }
+        function openUploadStudio() { closeModals(null, true); document.getElementById('modal-upload').style.display = 'flex'; }
+
+        async function uploadTrack() {
+            const title = document.getElementById('up-title').value;
+            const artist = document.getElementById('up-artist').value;
+            const badge = document.getElementById('up-badge').value;
+            const coverFile = document.getElementById('in-cover').files[0];
+            const audioFile = document.getElementById('in-audio').files[0];
+
+            if(!title || !artist || !audioFile) return alert("Заполните данные!");
+            toast("Сохранение..."); closeModals(null, true);
+
+            const newTrack = {
+                id: Date.now(), title, artist, badge,
+                cover: coverFile ? await toB64(coverFile) : "https://via.placeholder.com/300/222222/ffffff?text=♫",
+                audioBlob: audioFile
+            };
+
+            const tx = db.transaction('tracks', 'readwrite');
+            tx.objectStore('tracks').put(newTrack);
+            tx.oncomplete = () => {
+                tracks.push(newTrack); toast("Трек загружен!"); renderGrid();
+            };
+        }
+
+        async function delTrack(id, e) {
+            e.stopPropagation();
+            if(confirm("Удалить трек навсегда?")) {
+                db.transaction('tracks', 'readwrite').objectStore('tracks').delete(id).onsuccess = () => {
+                    tracks = tracks.filter(t => t.id !== id);
+                    renderGrid(); toast("Удалено");
+                };
+            }
+        }
+
+        // === ПЛЕЙЛИСТЫ (СОЗДАНИЕ/ДОБАВЛЕНИЕ) ===
+        function openPlaylistMenu(trackId, e) {
+            e.stopPropagation();
+            trackToAddId = trackId;
+            const listDiv = document.getElementById('pl-select-list');
+            
+            if(playlists.length === 0) {
+                listDiv.innerHTML = '<p style="color:#aaa; font-size:14px;">Нет плейлистов</p>';
+            } else {
+                listDiv.innerHTML = playlists.map(pl => `
+                    <div class="pl-list-item" onclick="addToPlaylist('${pl.id}')">
+                        <span class="material-symbols-outlined">queue_music</span>
+                        <span>${pl.name}</span>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('new-pl-name').value = '';
+            document.getElementById('modal-playlist').style.display = 'flex';
+        }
+
+        function createNewPlaylist() {
+            const name = document.getElementById('new-pl-name').value.trim();
+            if(!name) return alert("Введите название!");
+            if(name.length > 20) return alert("Название слишком длинное!");
+
+            const newPl = { id: 'pl_' + Date.now(), name: name, trackIds: [] };
+            playlists.push(newPl);
+            localStorage.setItem('ytm_playlists', JSON.stringify(playlists));
+            
+            if(trackToAddId) addToPlaylist(newPl.id);
+            else { closeModals(null, true); toast("Плейлист создан!"); switchView('playlists'); }
+        }
+
+        function addToPlaylist(plId) {
+            const pl = playlists.find(p => p.id === plId);
+            if(pl && trackToAddId) {
+                if(!pl.trackIds.includes(trackToAddId)) {
+                    pl.trackIds.push(trackToAddId);
+                    localStorage.setItem('ytm_playlists', JSON.stringify(playlists));
+                    toast(`Добавлено в "${pl.name}"`);
+                } else {
+                    toast("Уже есть в этом плейлисте");
+                }
+            }
+            closeModals(null, true);
+        }
+
+        // НОВОЕ: Удаление трека ИЗ плейлиста
+        function removeFromPlaylist(trackId, plId, e) {
+            e.stopPropagation();
+            const pl = playlists.find(p => p.id === plId);
+            if(pl) {
+                pl.trackIds = pl.trackIds.filter(id => id !== trackId);
+                localStorage.setItem('ytm_playlists', JSON.stringify(playlists));
+                toast("Убрано из плейлиста");
+                openPlaylistDetail(plId); // Обновляем вид плейлиста
+            }
+        }
+
+        // === ПЛЕЙЛИСТЫ (УПРАВЛЕНИЕ НАЗВАНИЕМ) ===
+        function renderPlaylists() {
+            const grid = document.getElementById('playlists-grid');
+            if(playlists.length === 0) { grid.innerHTML = '<p>У вас пока нет плейлистов.</p>'; return; }
+            
+            grid.innerHTML = playlists.map(pl => `
+                <div class="pl-card" onclick="openPlaylistDetail('${pl.id}')">
+                    <div class="more-btn" onclick="openPlaylistEditMenu('${pl.id}', event)">
+                        <span class="material-symbols-outlined">more_vert</span>
+                    </div>
+                    <span class="material-symbols-outlined icon">library_music</span>
+                    <h3>${pl.name}</h3>
+                    <p style="color:var(--text-sec); font-size:13px; margin-top:8px;">${pl.trackIds.length} треков</p>
+                </div>
+            `).join('');
+        }
+
+        function openPlaylistEditMenu(plId, e) {
+            e.stopPropagation();
+            playlistToEditId = plId;
+            const pl = playlists.find(p => p.id === plId);
+            document.getElementById('edit-pl-name').value = pl.name;
+            document.getElementById('modal-edit-playlist').style.display = 'flex';
+        }
+
+        function savePlaylistName() {
+            const newName = document.getElementById('edit-pl-name').value.trim();
+            if(!newName || newName.length > 20) return alert("Некорректное название!");
+            const pl = playlists.find(p => p.id === playlistToEditId);
+            if(pl) {
+                pl.name = newName;
+                localStorage.setItem('ytm_playlists', JSON.stringify(playlists));
+                renderPlaylists(); closeModals(null, true); toast("Переименовано!");
+            }
+        }
+
+        function deletePlaylist() {
+            if(confirm("Удалить этот плейлист? Треки останутся в общей базе.")) {
+                playlists = playlists.filter(p => p.id !== playlistToEditId);
+                localStorage.setItem('ytm_playlists', JSON.stringify(playlists));
+                renderPlaylists(); closeModals(null, true); toast("Удалено!");
+            }
+        }
+
+        function openPlaylistDetail(plId) {
+            const pl = playlists.find(p => p.id === plId);
+            if(!pl) return;
+            document.getElementById('detail-pl-name').innerText = pl.name;
+            switchView('playlist-detail');
+            
+            const plTracks = pl.trackIds.map(tid => tracks.find(t => t.id === tid)).filter(Boolean);
+            
+            if(plTracks.length === 0) { document.getElementById('pl-detail-grid').innerHTML = '<p>Плейлист пуст.</p>'; return; }
+            document.getElementById('pl-detail-grid').innerHTML = generateTrackCards(plTracks, 'playlist', plId);
+        }
+
+        // === РЕНДЕР И ПЛЕЕР ===
+        function generateTrackCards(trackArray, context = 'main', currentPlId = null) {
+            let htmlArray = trackArray.map((t) => `
+                <div class="track-card" onclick="loadTrack(${t.id})">
+                    <div class="cover-wrapper">
+                        <img src="${t.cover}">
+                        <div class="play-overlay"><span class="material-symbols-outlined">play_arrow</span></div>
+                        
+                        <div class="more-btn" title="Добавить в плейлист" onclick="openPlaylistMenu(${t.id}, event)">
+                            <span class="material-symbols-outlined">playlist_add</span>
+                        </div>
+                        
+                        ${(isAdmin && context === 'main') ? `<div class="admin-del-btn" title="Удалить трек навсегда" onclick="delTrack(${t.id}, event)"><span class="material-symbols-outlined" style="font-size:20px;">delete</span></div>` : ''}
+                        
+                        ${(context === 'playlist') ? `<div class="pl-remove-btn" title="Убрать из плейлиста" onclick="removeFromPlaylist(${t.id}, '${currentPlId}', event)"><span class="material-symbols-outlined" style="font-size:20px;">close</span></div>` : ''}
+                    </div>
+                    <div class="track-info">
+                        <h3>${t.title}</h3>
+                        <p>${t.artist} ${getBadgeHTML(t.badge)}</p>
+                    </div>
+                </div>
+            `);
+            
+            // На главной показываем новые первыми. В плейлисте - в порядке добавления.
+            if(context === 'main') htmlArray = htmlArray.reverse();
+            
+            return htmlArray.join('');
+        }
+
+        function renderGrid(trackList = tracks) {
+            const grid = document.getElementById('main-grid');
+            if(trackList.length === 0) grid.innerHTML = '<p style="grid-column:1/-1;">Ничего не найдено.</p>';
+            else grid.innerHTML = generateTrackCards(trackList, 'main');
+        }
+
+        function loadTrack(targetId) {
+            const index = tracks.findIndex(t => t.id === targetId);
+            if(index === -1) return;
+            currentTrackIndex = index;
+            const t = tracks[index];
+            
+            document.getElementById('pl-title').innerText = t.title;
+            document.getElementById('pl-artist').innerHTML = `${t.artist} ${getBadgeHTML(t.badge)}`;
+            document.getElementById('pl-cover').src = t.cover;
+            
+            audio.src = URL.createObjectURL(t.audioBlob);
+            audio.play(); document.getElementById('btn-play-pause').innerText = "pause_circle";
+        }
+
+        function togglePlay() {
+            if(!audio.src) return;
+            if(audio.paused) { audio.play(); document.getElementById('btn-play-pause').innerText = "pause_circle"; }
+            else { audio.pause(); document.getElementById('btn-play-pause').innerText = "play_circle"; }
+        }
+
+        function playNext() {
+            if(tracks.length === 0) return;
+            currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+            loadTrack(tracks[currentTrackIndex].id);
+        }
+        function playPrev() {
+            if(tracks.length === 0) return;
+            currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+            loadTrack(tracks[currentTrackIndex].id);
+        }
+
+        function formatTime(sec) { let m = Math.floor(sec/60), s = Math.floor(sec%60); return `${m}:${s<10?'0':''}${s}`; }
+        
+        audio.addEventListener('timeupdate', () => {
+            if(!audio.duration) return;
+            document.getElementById('pl-time').innerText = formatTime(audio.currentTime);
+            document.getElementById('pl-duration').innerText = formatTime(audio.duration);
+            fillProg.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+        });
+        audio.addEventListener('ended', playNext);
+        
+        function seekTrack(e) { if(!audio.duration) return; const rect = e.currentTarget.getBoundingClientRect(); audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration; }
+        function setVolume(e) { const rect = e.currentTarget.getBoundingClientRect(); const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); audio.volume = pos; document.getElementById('vol-fill').style.width = `${pos * 100}%`; }
+
+        // === ИНИЦИАЛИЗАЦИЯ ===
+        window.onload = async () => {
+            if(isAdmin) document.getElementById('admin-fab').style.display = 'flex';
+            audio.volume = 1;
+            try {
+                await initDB();
+                const req = db.transaction('tracks', 'readonly').objectStore('tracks').getAll();
+                req.onsuccess = () => { tracks = req.result; renderGrid(); };
+            } catch (err) { alert("Ошибка базы: " + err); }
+        };
+    </script>
+</body>
+</html>
